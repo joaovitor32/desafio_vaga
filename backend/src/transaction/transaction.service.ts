@@ -114,52 +114,45 @@ export class TransactionService {
       throw new BadRequestException('Error creating transactions.');
     }
   }
-
   async findTransactions(
     nome?: string,
     cpfCnpj?: string,
     data?: Date,
-    valor?: string,
+    valor?: number,
     page = 1,
     limit = 10,
-  ): Promise<{ data: Transaction[]; total: number }> {
-    try {
-      const query = this.transactionModel
-        .find()
-        .populate('userId', 'nome cpfCnpj')
-        .skip((page - 1) * limit)
-        .limit(limit);
+  ) {
+    const query = this.transactionModel
+      .find()
+      .populate('userId', 'nome cpfCnpj')
+      .lean();
 
-      if (nome) {
-        query.where('userId.nome').equals(nome);
-      }
-
-      if (cpfCnpj) {
-        query.where('userId.cpfCnpj').equals(cpfCnpj);
-      }
-
-      if (data) {
-        query.where('data').equals(data);
-      }
-
-      if (valor) {
-        query.where('valor').equals(valor);
-      }
-
-      const total = await this.transactionModel.countDocuments(
-        query.getFilter(),
-      );
-      const dataResult = await query.exec();
-
-      if (dataResult.length === 0) {
-        throw new NotFoundException(
-          'No transactions found for the given criteria.',
-        );
-      }
-
-      return { data: dataResult, total };
-    } catch (error) {
-      throw new Error(`Failed to fetch transactions: ${error.message}`);
+    if (nome) {
+      query.where('userId.nome').equals(nome);
     }
+
+    if (cpfCnpj) {
+      query.where('userId.cpfCnpj').equals(cpfCnpj);
+    }
+
+    if (data) {
+      query.where('data').equals(data);
+    }
+
+    if (valor !== undefined) {
+      query.where('valor').equals(valor);
+    }
+
+    query.skip((page - 1) * limit).limit(limit);
+
+    const transactions = await query.exec();
+
+    if (transactions.length === 0) {
+      throw new NotFoundException(
+        'No transactions found with the given filters.',
+      );
+    }
+
+    return transactions;
   }
 }

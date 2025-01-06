@@ -29,7 +29,7 @@ export class TransactionController {
     @Query('nome') nome?: string,
     @Query('cpfCnpj') cpfCnpj?: string,
     @Query('data') data?: Date,
-    @Query('valor') valor?: string,
+    @Query('valor') valor?: number,
     @Query('page') page?: number,
   ): Promise<any> {
     return this.transactionService.findTransactions(
