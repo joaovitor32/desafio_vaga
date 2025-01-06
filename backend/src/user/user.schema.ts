@@ -1,27 +1,16 @@
-import * as AutoIncrementFactory from 'mongoose-sequence';
-import * as mongoose from 'mongoose';
-
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 import { HydratedDocument } from 'mongoose';
 
-const AutoIncrement = AutoIncrementFactory(mongoose);
-
 export type UsersDocument = HydratedDocument<Users>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Users {
-  @Prop({ unique: true })
-  id: number;
+  @Prop({ required: true })
+  nome: string;
 
-  @Prop()
-  name: string;
-
-  @Prop()
+  @Prop({ required: true })
   cpfCnpj: string;
 }
 
 export const UsersSchema = SchemaFactory.createForClass(Users);
-
-// Aplicando o plugin AutoIncrement
-UsersSchema.plugin(AutoIncrement, { inc_field: 'id' });
