@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Users, UsersDocument } from '../user/user.schema';
@@ -108,6 +112,54 @@ export class TransactionService {
     } catch (err) {
       console.error('Error creating transactions:', err);
       throw new BadRequestException('Error creating transactions.');
+    }
+  }
+
+  async findTransactions(
+    nome?: string,
+    cpfCnpj?: string,
+    data?: Date,
+    valor?: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{ data: Transaction[]; total: number }> {
+    try {
+      const query = this.transactionModel
+        .find()
+        .populate('userId', 'nome cpfCnpj')
+        .skip((page - 1) * limit)
+        .limit(limit);
+
+      if (nome) {
+        query.where('userId.nome').equals(nome);
+      }
+
+      if (cpfCnpj) {
+        query.where('userId.cpfCnpj').equals(cpfCnpj);
+      }
+
+      if (data) {
+        query.where('data').equals(data);
+      }
+
+      if (valor) {
+        query.where('valor').equals(valor);
+      }
+
+      const total = await this.transactionModel.countDocuments(
+        query.getFilter(),
+      );
+      const dataResult = await query.exec();
+
+      if (dataResult.length === 0) {
+        throw new NotFoundException(
+          'No transactions found for the given criteria.',
+        );
+      }
+
+      return { data: dataResult, total };
+    } catch (error) {
+      throw new Error(`Failed to fetch transactions: ${error.message}`);
     }
   }
 }
