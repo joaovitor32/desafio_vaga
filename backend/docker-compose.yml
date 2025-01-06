@@ -1,18 +1,14 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15
-    container_name: postgres
+  mongo:
+    image: mongo:5.0
+    container_name: mongo
     restart: always
-    environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_DATABASE}
     ports:
-      - '${DB_PORT}:5432'
+      - '${DB_PORT}:27017'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
     env_file:
       - .env
 
@@ -25,15 +21,13 @@ services:
     ports:
       - '3000:3000'
     environment:
-      DB_HOST: postgres
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: mongo
       DB_PORT: ${DB_PORT}
       DB_DATABASE: ${DB_DATABASE}
     depends_on:
-      - postgres
+      - mongo
     env_file:
       - .env
 
 volumes:
-  postgres_data:
+  mongo_data:
