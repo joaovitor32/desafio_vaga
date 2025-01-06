@@ -6,14 +6,14 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model } from 'mongoose';
 import { Users, UsersDocument } from '../user/user.schema';
-import { Transaction, TransactionDocument } from './transaction.schema';
+import { Transactions, TransactionsDocument } from './transactions.schema';
 
 @Injectable()
-export class TransactionService {
+export class TransactionsService {
   constructor(
     @InjectModel(Users.name) private userModel: Model<UsersDocument>,
-    @InjectModel(Transaction.name)
-    private transactionModel: Model<TransactionDocument>,
+    @InjectModel(Transactions.name)
+    private transactionModel: Model<TransactionsDocument>,
   ) { }
 
   /**

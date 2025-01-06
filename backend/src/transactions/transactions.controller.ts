@@ -7,11 +7,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { TransactionService } from './transaction.service';
+import { TransactionsService } from './transactions.service';
 
-@Controller('transaction')
-export class TransactionController {
-  constructor(private readonly transactionService: TransactionService) { }
+@Controller('transactions')
+export class TransactionsController {
+  constructor(private readonly transactionsService: TransactionsService) { }
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
@@ -21,7 +21,7 @@ export class TransactionController {
     }
 
     const content = file.buffer.toString('utf-8');
-    return this.transactionService.createTransactions(content);
+    return this.transactionsService.createTransactions(content);
   }
 
   @Get()
@@ -32,7 +32,7 @@ export class TransactionController {
     @Query('valor') valor?: number,
     @Query('page') page?: number,
   ): Promise<any> {
-    return this.transactionService.findTransactions(
+    return this.transactionsService.findTransactions(
       nome,
       cpfCnpj,
       data,

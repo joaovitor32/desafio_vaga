@@ -5,10 +5,10 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
-export type TransactionDocument = HydratedDocument<Transaction>;
+export type TransactionsDocument = HydratedDocument<Transactions>;
 
 @Schema()
-export class Transaction {
+export class Transactions {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: true })
   userId: mongoose.Types.ObjectId;
 
@@ -25,4 +25,4 @@ export class Transaction {
   valor: mongoose.Schema.Types.Decimal128;
 }
 
-export const TransactionSchema = SchemaFactory.createForClass(Transaction);
+export const TransactionsSchema = SchemaFactory.createForClass(Transactions);

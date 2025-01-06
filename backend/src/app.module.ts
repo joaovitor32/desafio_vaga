@@ -3,7 +3,7 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { TransactionModule } from './transaction/transaction.module';
+import { TransactionsModule } from './transactions/transactions.module';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -15,7 +15,7 @@ import { UserModule } from './user/user.module';
       `mongodb://${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}?replicaSet=rs0`,
     ),
     UserModule,
-    TransactionModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
