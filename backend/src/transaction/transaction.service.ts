@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { ClientSession, Model } from 'mongoose';
 import { Users, UsersDocument } from '../user/user.schema';
 import { Transaction, TransactionDocument } from './transaction.schema';
 
@@ -52,17 +52,37 @@ export class TransactionService {
    * @param cpfCnpj CPF ou CNPJ do usuário.
    * @returns ID do usuário.
    */
-  private async getOrCreateUser(nome: string, cpfCnpj: string): Promise<any> {
-    const existingUser = await this.userModel.findOne({ nome, cpfCnpj });
+  async getOrCreateUser(
+    nome: string,
+    cpfCnpj: string,
+    session?: ClientSession, // Optional session for transactions
+  ): Promise<any> {
+    try {
+      // Check if the user already exists
+      const existingUser = await this.userModel.findOne(
+        { cpfCnpj },
+        null,
+        session ? { session } : {},
+      );
 
-    if (existingUser) {
-      return existingUser._id;
+      if (existingUser) {
+        return existingUser._id;
+      }
+
+      // Create a new user if not found
+      const newUser = new this.userModel({
+        nome,
+        cpfCnpj,
+        createdAt: new Date(),
+      });
+
+      // Save the new user to the database, respecting the session if provided
+      const savedUser = await newUser.save({ session });
+      return savedUser._id;
+    } catch (error) {
+      console.error('Error in getOrCreateUser:', error);
+      throw new Error('Failed to get or create user.');
     }
-
-    const newUser = new this.userModel({ nome, cpfCnpj });
-    const savedUser = await newUser.save();
-
-    return savedUser._id;
   }
 
   /**
@@ -71,11 +91,12 @@ export class TransactionService {
    * @returns Lista de transações criadas.
    */
   async createTransactions(content: string): Promise<any[]> {
-    // Divide o conteúdo em linhas não vazias
     const lines = content.split('\n').filter((line) => line.trim() !== '');
 
-    // Processa as linhas em objetos de transação
     const parsedTransactions = this.parseTransactions(lines);
+
+    const session = await this.transactionModel.db.startSession();
+    session.startTransaction();
 
     try {
       const transactionsToInsert = [];
@@ -84,14 +105,18 @@ export class TransactionService {
         const userId = await this.getOrCreateUser(
           transaction.nome,
           transaction.cpfCnpj,
+          session,
         );
 
-        // Verifica se a transação já existe no banco de dados
-        const existingTransaction = await this.transactionModel.findOne({
-          userId,
-          data: transaction.data,
-          valor: transaction.valor,
-        });
+        const existingTransaction = await this.transactionModel.findOne(
+          {
+            userId,
+            data: transaction.data,
+            valor: transaction.valor,
+          },
+          null,
+          { session },
+        );
 
         if (!existingTransaction) {
           transactionsToInsert.push({
@@ -103,15 +128,23 @@ export class TransactionService {
         }
       }
 
-      // Insere transações únicas no banco
       if (transactionsToInsert.length > 0) {
-        return this.transactionModel.insertMany(transactionsToInsert);
+        await this.transactionModel.insertMany(transactionsToInsert, {
+          session,
+        });
       }
 
-      return [];
+      // Finaliza a transação
+      await session.commitTransaction();
+      return transactionsToInsert;
     } catch (err) {
+      // Faz rollback em caso de erro
+      await session.abortTransaction();
       console.error('Error creating transactions:', err);
       throw new BadRequestException('Error creating transactions.');
+    } finally {
+      // Libera a sessão
+      session.endSession();
     }
   }
   async findTransactions(
@@ -122,31 +155,37 @@ export class TransactionService {
     page = 1,
     limit = 10,
   ) {
-    const query = this.transactionModel
-      .find()
-      .populate('userId', 'nome cpfCnpj')
-      .lean();
+    const filter: Record<string, any> = {};
 
-    if (nome) {
-      query.where('userId.nome').equals(nome);
+    if (nome?.trim()) {
+      filter['userId.nome'] = { $regex: `^${nome.trim()}$`, $options: 'i' };
     }
 
-    if (cpfCnpj) {
-      query.where('userId.cpfCnpj').equals(cpfCnpj);
+    if (cpfCnpj?.trim()) {
+      filter['userId.cpfCnpj'] = {
+        $regex: `^${cpfCnpj.trim()}$`,
+        $options: 'i',
+      };
     }
 
     if (data) {
-      query.where('data').equals(data);
+      filter['data'] = data;
     }
 
     if (valor !== undefined) {
-      query.where('valor').equals(valor);
+      filter['valor'] = valor;
     }
 
-    query.skip((page - 1) * limit).limit(limit);
+    // Build the query
+    const transactions = await this.transactionModel
+      .find(filter)
+      .populate('userId')
+      .lean()
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
 
-    const transactions = await query.exec();
-
+    // Handle the case where no transactions are found
     if (transactions.length === 0) {
       throw new NotFoundException(
         'No transactions found with the given filters.',

@@ -5,12 +5,18 @@ services:
     image: mongo:5.0
     container_name: mongo
     restart: always
+    command: ['--replSet', 'rs0', '--bind_ip_all']
     ports:
       - '${DB_PORT}:27017'
     volumes:
       - mongo_data:/data/db
     env_file:
       - .env
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   nestjs:
     build:
@@ -25,7 +31,8 @@ services:
       DB_PORT: ${DB_PORT}
       DB_DATABASE: ${DB_DATABASE}
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     env_file:
       - .env
 

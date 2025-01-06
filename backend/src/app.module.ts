@@ -12,7 +12,7 @@ import { UserModule } from './user/user.module';
       envFilePath: ['.env'],
     }),
     MongooseModule.forRoot(
-      `mongodb://${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}`,
+      `mongodb://${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}?replicaSet=rs0`,
     ),
     UserModule,
     TransactionModule,
