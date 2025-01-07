@@ -151,7 +151,8 @@ export class TransactionsService {
   async findTransactions(
     nome?: string,
     cpfCnpj?: string,
-    data?: Date,
+    dataInicial?: Date,
+    dataFinal?: Date,
     valor?: number,
     page = 1,
     limit = 10,
@@ -159,7 +160,8 @@ export class TransactionsService {
     const filter: Record<string, any> = await this.buildFilters(
       nome,
       cpfCnpj,
-      data,
+      dataInicial,
+      dataFinal,
       valor,
     );
 
@@ -178,6 +180,7 @@ export class TransactionsService {
       .lean()
       .skip((page - 1) * limit)
       .limit(limit)
+      .sort({ data: 1 })
       .exec();
 
     return {
@@ -194,19 +197,25 @@ export class TransactionsService {
   private async buildFilters(
     nome?: string,
     cpfCnpj?: string,
-    data?: Date,
+    dataInicial?: Date,
+    dataFinal?: Date,
     valor?: number,
   ) {
     const filter: Record<string, any> = {};
 
-    // Se nome ou cpfCnpj forem fornecidos, buscamos o usuário
     if (nome?.trim() || cpfCnpj?.trim()) {
       const user = await this.getUserByNameOrCpfCnpj(nome, cpfCnpj);
       filter['userId'] = user?._id;
     }
 
-    if (data) {
-      filter['data'] = data;
+    if (dataInicial || dataFinal) {
+      filter['data'] = {};
+      if (dataInicial) {
+        filter['data'].$gte = dataInicial;
+      }
+      if (dataFinal) {
+        filter['data'].$lte = dataFinal;
+      }
     }
 
     if (valor !== undefined) {

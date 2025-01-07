@@ -29,14 +29,16 @@ export class TransactionsController {
   async findTransactions(
     @Query('nome') nome?: string,
     @Query('cpfCnpj') cpfCnpj?: string,
-    @Query('data') data?: Date,
+    @Query('dataInicial') dataInicial?: Date,
+    @Query('dataFinal') dataFinal?: Date,
     @Query('valor') valor?: number,
     @Query('page') page?: number,
   ): Promise<any> {
     return this.transactionsService.findTransactions(
       nome,
       cpfCnpj,
-      data,
+      dataInicial,
+      dataFinal,
       valor,
       page,
     );

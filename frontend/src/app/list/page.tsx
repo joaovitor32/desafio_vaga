@@ -20,6 +20,7 @@ import axios, { AxiosError } from "axios";
 
 import Pagination from "../globals/components/ui/Pagination";
 import { formatCPFOrCNPJ } from "../globals/utils/document";
+import { formatDateToDDMMYYYY } from "../globals/utils/date";
 import { formatPrice } from "../globals/utils/price";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -38,17 +39,29 @@ type TransactionsResponse = {
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [formData, setFormData] = useState({ nome: "", valor: 0 });
+  const [formData, setFormData] = useState({
+    nome: "",
+    valor: 0,
+    cpfCnpj: "",
+    dataInicial: "",
+    dataFinal: ""
+  });
 
   const fetchTransactions = async (
     page: number,
     nome?: string,
-    valor?: number
+    valor?: number,
+    cpfCnpj?: string,
+    dataInicial?: string,
+    dataFinal?: string
   ): Promise<TransactionsResponse> => {
     const params: { [key: string]: string | number } = { page };
 
     if (nome?.trim()) params.nome = nome;
+    if (cpfCnpj?.trim()) params.cpfCnpj = cpfCnpj;
     if (valor !== undefined && valor !== 0) params.valor = valor;
+    if (dataInicial) params.dataInicial = dataInicial;
+    if (dataFinal) params.dataFinal = dataFinal;
 
     const { data } = await axios.get(
       `${process.env.NEXT_PUBLIC_BACKEND_URL}/transactions`,
@@ -62,9 +75,24 @@ export default function Home() {
   };
 
   const { data, isLoading, isError, error } = useQuery<TransactionsResponse>({
-    queryKey: ["transaction", currentPage, formData.nome, formData.valor],
+    queryKey: [
+      "transaction",
+      currentPage,
+      formData.nome,
+      formData.valor,
+      formData.cpfCnpj,
+      formData.dataInicial,
+      formData.dataFinal,
+    ],
     queryFn: () =>
-      fetchTransactions(currentPage, formData.nome?.trim() || undefined, formData.valor || undefined),
+      fetchTransactions(
+        currentPage,
+        formData.nome?.trim() || undefined,
+        formData.valor || undefined,
+        formData.cpfCnpj || undefined,
+        formData.dataInicial || undefined,
+        formData.dataFinal || undefined
+      ),
     retry: 3,
     enabled: currentPage > 0,
   });
@@ -77,12 +105,18 @@ export default function Home() {
 
   const handleFieldValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "dataInicial" || name === "dataFinal") {
+      const formattedDate = value ? new Date(value).toISOString().split('T')[0] : '';
+      setFormData((prev) => ({ ...prev, [name]: formattedDate }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    setCurrentPage(1); // Reset para página inicial ao buscar
+    setCurrentPage(1);
   };
 
   return (
@@ -113,7 +147,6 @@ export default function Home() {
       )}
 
       <Grid container spacing={2}>
-        {/* Formulário */}
         <Grid item xs={12} md={4}>
           <Box
             component="form"
@@ -134,13 +167,39 @@ export default function Home() {
               onChange={handleFieldValueChange}
               fullWidth
             />
+            <TextField
+              label="Document"
+              name="cpfCnpj"
+              value={formData.cpfCnpj}
+              onChange={handleFieldValueChange}
+              fullWidth
+            />
+            <TextField
+              label="Data Inicial"
+              type="date"
+              name="dataInicial"
+              value={formData.dataInicial}
+              onChange={handleFieldValueChange}
+              variant="outlined"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Data Final"
+              type="date"
+              name="dataFinal"
+              value={formData.dataFinal}
+              onChange={handleFieldValueChange}
+              variant="outlined"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
             <Button type="submit" variant="contained" color="primary">
               Enviar
             </Button>
           </Box>
         </Grid>
 
-        {/* Tabela */}
         <Grid item xs={12} md={8}>
           <TableContainer component={Paper}>
             <Table>
@@ -161,7 +220,7 @@ export default function Home() {
                       {formatCPFOrCNPJ(row.userId.cpfCnpj)}
                     </TableCell>
                     <TableCell style={{ whiteSpace: 'nowrap' }}>
-                      {new Date(row.data).toLocaleDateString()}
+                      {formatDateToDDMMYYYY(row.data)}
                     </TableCell>
                     <TableCell style={{ whiteSpace: 'nowrap' }}>
                       R$ {formatPrice(row.valor.$numberDecimal)}
@@ -172,7 +231,6 @@ export default function Home() {
               </TableBody>
             </Table>
           </TableContainer>
-
         </Grid>
       </Grid>
 
