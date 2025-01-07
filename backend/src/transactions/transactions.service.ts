@@ -156,31 +156,22 @@ export class TransactionsService {
     page = 1,
     limit = 10,
   ) {
-    const filter: Record<string, any> = {};
+    const filter: Record<string, any> = await this.buildFilters(
+      nome,
+      cpfCnpj,
+      data,
+      valor,
+    );
 
-    if (nome?.trim()) {
-      filter['userId.nome'] = { $regex: `^${nome.trim()}$`, $options: 'i' };
-    }
-
-    if (cpfCnpj?.trim()) {
-      filter['userId.cpfCnpj'] = {
-        $regex: `^${cpfCnpj.trim()}$`,
-        $options: 'i',
-      };
-    }
-
-    if (data) {
-      filter['data'] = data;
-    }
-
-    if (valor !== undefined) {
-      filter['valor'] = { $eq: valor };
-    }
-
-    // Get the total number of documents matching the filter
     const totalDocuments = await this.transactionModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalDocuments / limit);
 
-    // Build the paginated query
+    if (totalDocuments === 0) {
+      throw new NotFoundException(
+        'No transactions found with the given filters.',
+      );
+    }
+
     const transactions = await this.transactionModel
       .find(filter)
       .populate('userId')
@@ -188,15 +179,6 @@ export class TransactionsService {
       .skip((page - 1) * limit)
       .limit(limit)
       .exec();
-
-    if (transactions.length === 0) {
-      throw new NotFoundException(
-        'No transactions found with the given filters.',
-      );
-    }
-
-    // Calculate total pages
-    const totalPages = Math.ceil(totalDocuments / limit);
 
     return {
       data: transactions,
@@ -207,5 +189,50 @@ export class TransactionsService {
         itemsPerPage: limit,
       },
     };
+  }
+
+  private async buildFilters(
+    nome?: string,
+    cpfCnpj?: string,
+    data?: Date,
+    valor?: number,
+  ) {
+    const filter: Record<string, any> = {};
+
+    // Se nome ou cpfCnpj forem fornecidos, buscamos o usuário
+    if (nome?.trim() || cpfCnpj?.trim()) {
+      const user = await this.getUserByNameOrCpfCnpj(nome, cpfCnpj);
+      filter['userId'] = user?._id;
+    }
+
+    if (data) {
+      filter['data'] = data;
+    }
+
+    if (valor !== undefined) {
+      filter['valor'] = { $eq: valor };
+    }
+
+    return filter;
+  }
+
+  private async getUserByNameOrCpfCnpj(nome?: string, cpfCnpj?: string) {
+    const userFilter: Record<string, any> = {};
+
+    if (nome?.trim()) {
+      userFilter['nome'] = nome;
+    }
+
+    if (cpfCnpj?.trim()) {
+      userFilter['cpfCnpj'] = cpfCnpj;
+    }
+
+    const user = await this.userModel.findOne(userFilter);
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    return user;
   }
 }

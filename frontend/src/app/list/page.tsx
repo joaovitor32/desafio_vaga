@@ -47,7 +47,7 @@ export default function Home() {
   ): Promise<TransactionsResponse> => {
     const params: { [key: string]: string | number } = { page };
 
-    if (nome) params.nome = nome;
+    if (nome?.trim()) params.nome = nome;
     if (valor !== undefined && valor !== 0) params.valor = valor;
 
     const { data } = await axios.get(
@@ -64,10 +64,11 @@ export default function Home() {
   const { data, isLoading, isError, error } = useQuery<TransactionsResponse>({
     queryKey: ["transaction", currentPage, formData.nome, formData.valor],
     queryFn: () =>
-      fetchTransactions(currentPage, formData.nome, formData.valor),
+      fetchTransactions(currentPage, formData.nome?.trim() || undefined, formData.valor || undefined),
     retry: 3,
     enabled: currentPage > 0,
   });
+
   const pagination = data?.pagination;
   const totalPages = pagination?.totalPages || 0;
   const transactions = data?.data || [];
@@ -145,30 +146,33 @@ export default function Home() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Nome</TableCell>
-                  <TableCell>Documento</TableCell>
-                  <TableCell>Data</TableCell>
-                  <TableCell>Valor</TableCell>
-                  <TableCell>ID da Transação</TableCell>
+                  <TableCell style={{ whiteSpace: 'nowrap' }}>Nome</TableCell>
+                  <TableCell style={{ whiteSpace: 'nowrap' }}>Documento</TableCell>
+                  <TableCell style={{ whiteSpace: 'nowrap' }}>Data</TableCell>
+                  <TableCell style={{ whiteSpace: 'nowrap' }}>Valor</TableCell>
+                  <TableCell style={{ whiteSpace: 'nowrap' }}>ID da Transação</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {transactions.map((row, index) => (
                   <TableRow key={`${row.userId.nome}-${index}`}>
-                    <TableCell>{row.userId.nome}</TableCell>
-                    <TableCell>{formatCPFOrCNPJ(row.userId.cpfCnpj)}</TableCell>
-                    <TableCell>
+                    <TableCell style={{ whiteSpace: 'nowrap' }}>{row.userId.nome}</TableCell>
+                    <TableCell style={{ whiteSpace: 'nowrap' }}>
+                      {formatCPFOrCNPJ(row.userId.cpfCnpj)}
+                    </TableCell>
+                    <TableCell style={{ whiteSpace: 'nowrap' }}>
                       {new Date(row.data).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell style={{ whiteSpace: 'nowrap' }}>
                       R$ {formatPrice(row.valor.$numberDecimal)}
                     </TableCell>
-                    <TableCell>{row.transactionId}</TableCell>
+                    <TableCell style={{ whiteSpace: 'nowrap' }}>{row.transactionId}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
+
         </Grid>
       </Grid>
 
