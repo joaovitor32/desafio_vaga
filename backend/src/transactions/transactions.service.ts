@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model } from 'mongoose';
 import { Users, UsersDocument } from '../user/user.schema';
 import { Transactions, TransactionsDocument } from './transactions.schema';
+import { splitContent } from 'src/utils/file';
 
 @Injectable()
 export class TransactionsService {
@@ -87,42 +88,17 @@ export class TransactionsService {
    * @returns Lista de transações criadas.
    */
   async createTransactions(content: string): Promise<any[]> {
-    const lines = content.split('\n').filter((line) => line.trim() !== '');
-
+    const lines = splitContent(content);
     const parsedTransactions = this.parseTransactions(lines);
 
     const session = await this.transactionModel.db.startSession();
     session.startTransaction();
 
     try {
-      const transactionsToInsert = [];
-
-      for (const transaction of parsedTransactions) {
-        const userId = await this.getOrCreateUser(
-          transaction.nome,
-          transaction.cpfCnpj,
-          session,
-        );
-
-        const existingTransaction = await this.transactionModel.findOne(
-          {
-            userId,
-            data: transaction.data,
-            valor: transaction.valor,
-          },
-          null,
-          { session },
-        );
-
-        if (!existingTransaction) {
-          transactionsToInsert.push({
-            userId,
-            transactionId: transaction.id,
-            data: transaction.data,
-            valor: transaction.valor,
-          });
-        }
-      }
+      const transactionsToInsert = await this.processTransactions(
+        parsedTransactions,
+        session,
+      );
 
       if (transactionsToInsert.length > 0) {
         await this.transactionModel.insertMany(transactionsToInsert, {
@@ -130,18 +106,58 @@ export class TransactionsService {
         });
       }
 
-      // Finaliza a transação
       await session.commitTransaction();
       return transactionsToInsert;
-    } catch (err) {
-      // Faz rollback em caso de erro
+    } catch (error) {
       await session.abortTransaction();
-      console.error('Error creating transactions:', err);
-      throw new BadRequestException('Error creating transactions.');
+      throw new BadRequestException('Error creating transactions.', error);
     } finally {
-      // Libera a sessão
       session.endSession();
     }
+  }
+
+  private async processTransactions(
+    parsedTransactions: any[],
+    session: any,
+  ): Promise<any[]> {
+    const transactionsToInsert = [];
+    const userPromises = new Map<string, Promise<string | null>>();
+
+    for (const transaction of parsedTransactions) {
+      const userKey = `${transaction.nome}_${transaction.cpfCnpj}`;
+
+      let userIdPromise = userPromises.get(userKey);
+      if (!userIdPromise) {
+        userIdPromise = this.getOrCreateUser(
+          transaction.nome,
+          transaction.cpfCnpj,
+          session,
+        );
+        userPromises.set(userKey, userIdPromise);
+      }
+
+      const userId = await userIdPromise;
+      const existingTransaction = await this.transactionModel.findOne(
+        {
+          userId,
+          data: transaction.data,
+          valor: transaction.valor,
+        },
+        null,
+        { session },
+      );
+
+      if (!existingTransaction) {
+        transactionsToInsert.push({
+          userId,
+          transactionId: transaction.id,
+          data: transaction.data,
+          valor: transaction.valor,
+        });
+      }
+    }
+
+    return transactionsToInsert;
   }
 
   async findTransactions(
