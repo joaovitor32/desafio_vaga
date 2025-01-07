@@ -174,7 +174,7 @@ export class TransactionsService {
     }
 
     if (valor !== undefined) {
-      filter['valor'] = valor;
+      filter['valor'] = { $eq: valor };
     }
 
     // Get the total number of documents matching the filter
