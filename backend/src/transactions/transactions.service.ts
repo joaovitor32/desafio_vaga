@@ -147,6 +147,7 @@ export class TransactionsService {
       session.endSession();
     }
   }
+
   async findTransactions(
     nome?: string,
     cpfCnpj?: string,
@@ -176,7 +177,10 @@ export class TransactionsService {
       filter['valor'] = valor;
     }
 
-    // Build the query
+    // Get the total number of documents matching the filter
+    const totalDocuments = await this.transactionModel.countDocuments(filter);
+
+    // Build the paginated query
     const transactions = await this.transactionModel
       .find(filter)
       .populate('userId')
@@ -185,13 +189,23 @@ export class TransactionsService {
       .limit(limit)
       .exec();
 
-    // Handle the case where no transactions are found
     if (transactions.length === 0) {
       throw new NotFoundException(
         'No transactions found with the given filters.',
       );
     }
 
-    return transactions;
+    // Calculate total pages
+    const totalPages = Math.ceil(totalDocuments / limit);
+
+    return {
+      data: transactions,
+      pagination: {
+        totalItems: totalDocuments,
+        totalPages,
+        currentPage: page,
+        itemsPerPage: limit,
+      },
+    };
   }
 }

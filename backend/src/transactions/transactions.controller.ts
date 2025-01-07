@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  HttpCode,
   Post,
   Query,
   UploadedFile,
@@ -15,6 +16,7 @@ export class TransactionsController {
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
+  // @HttpCode(204)
   async createTransactions(@UploadedFile() file: any): Promise<any> {
     if (!file) {
       throw new Error('No file uploaded.');
