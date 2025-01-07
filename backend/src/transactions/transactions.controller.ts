@@ -21,8 +21,27 @@ export class TransactionsController {
       throw new Error('No file uploaded.');
     }
 
+    const startTime = performance.now(); // Inicia a medição de tempo
+
     const content = file.buffer.toString('utf-8');
-    return this.transactionsService.createTransactions(content);
+
+    const result = await this.transactionsService.createTransactions(content);
+
+    const endTime = performance.now(); // Finaliza a medição de tempo
+    const duration = endTime - startTime; // Calcula a duração
+
+    const executionTimeInSeconds = duration / 1000;
+
+    console.log(
+      `Tempo total de execução em segundos: ${executionTimeInSeconds}s`,
+    );
+
+    return {
+      result,
+      startTime,
+      endTime,
+      executionTime: `${executionTimeInSeconds.toFixed(4)}s`,
+    };
   }
 
   @Get()

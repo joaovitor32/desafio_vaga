@@ -1,6 +1,6 @@
 "use client"
 
-import { Box, Button, Container, Typography } from "@mui/material";
+import { Box, Container, Typography, useTheme } from "@mui/material";
 
 import { Suspense } from "react";
 import { useUploadFile } from "./globals/hooks/useUploadFiles";
@@ -17,7 +17,11 @@ export default function Home() {
   };
 
 
+  const theme = useTheme()
   const isPending = mutation.isPending
+  const isSuccess = mutation.isSuccess;
+
+  const executionTime = mutation.data?.data?.executionTime;
 
   return <Container
     maxWidth="lg"
@@ -36,6 +40,16 @@ export default function Home() {
       >
         Fazer upload de transações
       </Typography>
+      {isSuccess ?
+        <Typography sx={{
+          color: "primary.main",
+          fontWeight: "bold"
+        }}
+        >
+          O último tempo de execução das transações inseridas foi: {executionTime}
+        </Typography>
+        : null
+      }
       <Box sx={{ position: "relative", display: "inline-block" }}>
         <input
           type="file"
@@ -52,8 +66,7 @@ export default function Home() {
             cursor: isPending ? "not-allowed" : "pointer",
           }}
         />
-        {/* Botão estilizado */}
-        <Button
+        <button
           type="button"
           disabled={isPending}
           style={{
@@ -61,16 +74,24 @@ export default function Home() {
             border: "2px solid",
             borderColor: "primary.main",
             borderRadius: "5px",
-            backgroundColor: isPending ? "grey.100" : "primary.main",
-            color: isPending ? "grey.500" : "grey.100",
+            backgroundColor: isPending ? theme.palette.grey[100] : theme.palette.primary.main,
+            color: isPending ? theme.palette.grey[500] : theme.palette.grey[100],
             cursor: isPending ? "not-allowed" : "pointer",
             fontWeight: "bold",
           }}
         >
           Selecionar Arquivo
-        </Button>
+        </button>
       </Box>
-      {mutation.isPending && <p>Enviando arquivo...</p>}
+      {isPending &&
+        <Typography sx={{
+          color: "primary.main",
+          fontWeight: "bold"
+        }}
+        >
+          Enviando arquivo...
+        </Typography>
+      }
     </Suspense>
   </Container>;
 }

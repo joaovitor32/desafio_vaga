@@ -58,7 +58,6 @@ export class TransactionsService {
     session?: ClientSession, // Optional session for transactions
   ): Promise<any> {
     try {
-      // Check if the user already exists
       const existingUser = await this.userModel.findOne(
         { cpfCnpj },
         null,
@@ -69,18 +68,15 @@ export class TransactionsService {
         return existingUser._id;
       }
 
-      // Create a new user if not found
       const newUser = new this.userModel({
         nome,
         cpfCnpj,
         createdAt: new Date(),
       });
 
-      // Save the new user to the database, respecting the session if provided
       const savedUser = await newUser.save({ session });
       return savedUser._id;
-    } catch (error) {
-      console.error('Error in getOrCreateUser:', error);
+    } catch {
       throw new Error('Failed to get or create user.');
     }
   }
