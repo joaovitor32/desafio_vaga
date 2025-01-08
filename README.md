@@ -70,3 +70,39 @@ Seu projeto será avaliado de acordo com os seguintes critérios:
 4. Seu conhecimento geral sobre a stack MERN.
 
 Boa sorte!
+
+#### Para rodar as aplicações
+
+##### Backend
+
+Entre na pasta backend
+
+```
+cd ./backend
+```
+
+Atualize ou crie o .env, use como referência o .env.example
+
+Agora rode os comandos em sequência
+
+```
+sudo chmod -R 777 run.sh
+./run.sh
+```
+
+Para para a aplicação:
+
+```
+sudo chmod -R 777 stop.sh
+./stop.sh
+```
+
+##### Frontend
+
+Entre na pasta frontend
+
+```
+cd ./frontend
+```
+
+Atualize ou crie o .env, use como referência o .env.example

@@ -8,6 +8,7 @@ import { ClientSession, Model } from 'mongoose';
 import { Users, UsersDocument } from '../user/user.schema';
 import { Transactions, TransactionsDocument } from './transactions.schema';
 import { splitContent } from 'src/utils/file';
+import { ParsedTransaction } from './types';
 
 @Injectable()
 export class TransactionsService {
@@ -17,76 +18,97 @@ export class TransactionsService {
     private transactionModel: Model<TransactionsDocument>,
   ) { }
 
-  /**
-   * Analisa as linhas de transações para objetos.
-   * @param lines Linhas de transações em formato texto.
-   * @returns Lista de transações analisadas.
-   */
-  private parseTransactions(lines: string[]): {
-    id: string;
-    nome: string;
-    cpfCnpj: string;
-    data: Date;
-    valor: number;
-  }[] {
+  private parseTransactions(lines: string[]): ParsedTransaction[] {
     return lines.map((line) => {
-      const fields = line.split(';').map((part) => part.split(':')[1]);
-      const [idValue, nomeValue, cpfCnpjValue, dataValue, valorValue] = fields;
+      const fields = line.split(';').map((part) => part.split(':')[1]?.trim());
+      const [id, nome, cpfCnpj, data, valor] = fields;
 
-      if (!nomeValue || !cpfCnpjValue || !dataValue || !valorValue) {
-        throw new BadRequestException('Invalid transaction format');
+      if (!id || !nome || !cpfCnpj || !data || !valor) {
+        throw new Error('Missing required fields');
       }
 
       return {
-        nome: nomeValue.trim(),
-        cpfCnpj: cpfCnpjValue.trim(),
-        data: new Date(dataValue.trim()),
-        valor: parseFloat(valorValue.trim()),
-        id: idValue,
+        id,
+        nome,
+        cpfCnpj,
+        data: new Date(data),
+        valor: parseFloat(valor),
       };
     });
   }
 
-  /**
-   * Retorna o ID do usuário, criando-o se necessário.
-   * @param nome Nome do usuário.
-   * @param cpfCnpj CPF ou CNPJ do usuário.
-   * @returns ID do usuário.
-   */
-  async getOrCreateUser(
+  private async findOrCreateUser(
     nome: string,
     cpfCnpj: string,
-    session?: ClientSession, // Optional session for transactions
+    session?: ClientSession,
   ): Promise<any> {
-    try {
-      const existingUser = await this.userModel.findOne(
-        { cpfCnpj },
-        null,
-        session ? { session } : {},
-      );
+    const options = session ? { session } : {};
+    const existingUser = await this.userModel.findOne(
+      { cpfCnpj },
+      null,
+      options,
+    );
 
-      if (existingUser) {
-        return existingUser._id;
-      }
-
-      const newUser = new this.userModel({
-        nome,
-        cpfCnpj,
-        createdAt: new Date(),
-      });
-
-      const savedUser = await newUser.save({ session });
-      return savedUser._id;
-    } catch {
-      throw new Error('Failed to get or create user.');
+    if (existingUser) {
+      return existingUser._id;
     }
+
+    const newUser = new this.userModel({
+      nome,
+      cpfCnpj,
+      createdAt: new Date(),
+    });
+
+    const savedUser = await newUser.save(options);
+    return savedUser._id;
   }
 
-  /**
-   * Processa o conteúdo fornecido para criar transações.
-   * @param content String contendo as transações separadas por linhas.
-   * @returns Lista de transações criadas.
-   */
+  private async processTransactions(
+    transactions: ParsedTransaction[],
+    session: ClientSession,
+  ): Promise<any[]> {
+    const transactionsToInsert = [];
+    const userPromises = new Map<string, Promise<string>>();
+
+    for (const transaction of transactions) {
+      // Gera uma chave única para identificar o usuário baseado no nome e CPF/CNPJ,
+      // verifica se já existe uma Promise associada a essa chave no Map (para evitar chamadas redundantes),
+      // cria uma nova Promise para buscar ou criar o usuário caso ainda não exista,
+      // e a reutiliza para garantir consistência e eficiência ao obter o ID do usuário.
+      const userKey = `${transaction.nome}_${transaction.cpfCnpj}`;
+
+      if (!userPromises.has(userKey)) {
+        userPromises.set(
+          userKey,
+          this.findOrCreateUser(transaction.nome, transaction.cpfCnpj, session),
+        );
+      }
+
+      const userId = await userPromises.get(userKey);
+
+      const existingTransaction = await this.transactionModel.findOne(
+        {
+          userId,
+          data: transaction.data,
+          valor: transaction.valor,
+        },
+        null,
+        { session },
+      );
+
+      if (!existingTransaction) {
+        transactionsToInsert.push({
+          userId,
+          transactionId: transaction.id,
+          data: transaction.data,
+          valor: transaction.valor,
+        });
+      }
+    }
+
+    return transactionsToInsert;
+  }
+
   async createTransactions(content: string): Promise<any[]> {
     const lines = splitContent(content);
     const parsedTransactions = this.parseTransactions(lines);
@@ -110,54 +132,13 @@ export class TransactionsService {
       return transactionsToInsert;
     } catch (error) {
       await session.abortTransaction();
-      throw new BadRequestException('Error creating transactions.', error);
+      throw new BadRequestException(
+        'Error creating transactions',
+        error.message || error,
+      );
     } finally {
       session.endSession();
     }
-  }
-
-  private async processTransactions(
-    parsedTransactions: any[],
-    session: any,
-  ): Promise<any[]> {
-    const transactionsToInsert = [];
-    const userPromises = new Map<string, Promise<string | null>>();
-
-    for (const transaction of parsedTransactions) {
-      const userKey = `${transaction.nome}_${transaction.cpfCnpj}`;
-
-      let userIdPromise = userPromises.get(userKey);
-      if (!userIdPromise) {
-        userIdPromise = this.getOrCreateUser(
-          transaction.nome,
-          transaction.cpfCnpj,
-          session,
-        );
-        userPromises.set(userKey, userIdPromise);
-      }
-
-      const userId = await userIdPromise;
-      const existingTransaction = await this.transactionModel.findOne(
-        {
-          userId,
-          data: transaction.data,
-          valor: transaction.valor,
-        },
-        null,
-        { session },
-      );
-
-      if (!existingTransaction) {
-        transactionsToInsert.push({
-          userId,
-          transactionId: transaction.id,
-          data: transaction.data,
-          valor: transaction.valor,
-        });
-      }
-    }
-
-    return transactionsToInsert;
   }
 
   async findTransactions(
