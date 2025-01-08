@@ -1,0 +1,11 @@
+id:76ee118b-60cc-4f69-9689-0c42cdc00d30;nome:Fernando Abshire DDS;cpfCnpj:37381486121;data:2024-06-13;valor:852211;
+id:dad0ae86-af79-4e39-bd43-d65c8a7c47e5;nome:Marshall Yost;cpfCnpj:17037928313;data:2024-05-27;valor:174378;
+id:def06f7a-67d9-4e63-9a50-c1a6f925cd88;nome:Shawna Pollich;cpfCnpj:15250670288;data:2024-01-27;valor:392563;
+id:a5a53ccb-a5ba-4118-8a95-a538bdbd6d48;nome:Roberto Gerlach-Ziemann MD;cpfCnpj:33514255628;data:2024-07-29;valor:788778;
+id:5ef48f0a-62c4-41ad-814e-2610c3d67e98;nome:Ben Goldner;cpfCnpj:15717641354;data:2024-04-11;valor:272580;
+id:d8d97f91-9c45-449d-977e-db8a3e5f34a6;nome:Earl McLaughlin;cpfCnpj:39497614705;data:2024-08-28;valor:302482;
+id:57225163-3251-4fe3-b857-1e005388df1b;nome:Brendan Williamson;cpfCnpj:35556333416;data:2024-04-13;valor:865299;
+id:336d9b7b-97ea-4b34-80b7-7c07859c1cf8;nome:Mindy Langosh;cpfCnpj:25763233409;data:2024-06-16;valor:146397;
+id:2313dbfe-2528-4bef-9331-ee076c922e9d;nome:Wm Conroy;cpfCnpj:21571368353;data:2024-06-22;valor:858982;
+id:39938166-4834-4b8b-91a3-88f0c50a6e53;nome:Mrs. Henrietta Batz;cpfCnpj:46067441110;data:2024-04-27;valor:399704;
+id:e1e2886c-4a59-4f9c-82f1-792342497885;nome:Mildred Olson;cpfCnpj:60037587757;data:2024-03-09;valor:629961;

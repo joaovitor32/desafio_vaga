@@ -106,3 +106,8 @@ cd ./frontend
 ```
 
 Atualize ou crie o .env, use como referência o .env.example
+
+```
+yarn dev
+xdg-open http://localhost:3001
+```

@@ -196,6 +196,8 @@ export class TransactionsService {
   ) {
     const filter: Record<string, any> = {};
 
+    // Essa parte de reter informações do usuário relacionado ao filtro pode
+    // ser aprimorado
     if (nome?.trim() || cpfCnpj?.trim()) {
       const user = await this.getUserByNameOrCpfCnpj(nome, cpfCnpj);
       filter['userId'] = user?._id;
