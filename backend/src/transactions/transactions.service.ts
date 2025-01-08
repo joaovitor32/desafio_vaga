@@ -89,6 +89,7 @@ export class TransactionsService {
       const existingTransaction = await this.transactionModel.findOne(
         {
           userId,
+          transactionId: transaction.id,
           data: transaction.data,
           valor: transaction.valor,
         },
