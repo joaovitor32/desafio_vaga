@@ -142,6 +142,7 @@ export class TransactionsService {
     }
   }
 
+  // Melhoria: implementar cache
   async findTransactions(
     nome?: string,
     cpfCnpj?: string,
