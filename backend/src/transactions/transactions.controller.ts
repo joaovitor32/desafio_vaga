@@ -15,7 +15,7 @@ export class TransactionsController {
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
-  // @HttpCode(204)
+  //[Melhoria] - Fazer uso de NodeJS Streams
   async createTransactions(@UploadedFile() file: any): Promise<any> {
     if (!file) {
       throw new Error('No file uploaded.');

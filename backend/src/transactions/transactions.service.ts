@@ -70,6 +70,7 @@ export class TransactionsService {
     const transactionsToInsert = [];
     const userPromises = new Map<string, Promise<string>>();
 
+    // [MELHORIA]: Fazer uso do for await ou Promises.all
     for (const transaction of transactions) {
       // Gera uma chave única para identificar o usuário baseado no nome e CPF/CNPJ,
       // verifica se já existe uma Promise associada a essa chave no Map (para evitar chamadas redundantes),
